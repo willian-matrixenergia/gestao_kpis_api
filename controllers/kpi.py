@@ -5,8 +5,13 @@ from typing import List
 from core.database import get_db
 from schemas.kpi import KpiResponse, KpiCreate, KpiUpdate
 from services.kpi import kpi_service
+from utils.security import get_api_key
 
-router = APIRouter(prefix="/kpis", tags=["kpis"])
+router = APIRouter(
+    prefix="/kpis", 
+    tags=["kpis"],
+    dependencies=[Depends(get_api_key)]
+)
 
 @router.post("/", response_model=KpiResponse)
 def create_kpi(kpi: KpiCreate, db: Session = Depends(get_db)):

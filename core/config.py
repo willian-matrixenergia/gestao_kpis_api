@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     # URL do banco de dados (ex: postgresql://user:password@localhost/dbname)
     _DATABASE_URL: str = "sqlite:///./test.db"
 
+    # Configuração de Segurança
+    API_KEY: str = "matrix_secret_key_2026"  # Valor padrão para desenvolvimento
+    API_KEY_NAME: str = "X-API-KEY"
+
     @property
     def DATABASE_URL(self) -> str:
         # Se estiver na Vercel (read-only filesystem), usa banco em memória
