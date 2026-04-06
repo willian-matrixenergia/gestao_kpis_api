@@ -1,14 +1,21 @@
 import os
 import tempfile
+import json
 from pydantic_settings import BaseSettings
 
 # Lógica para carregar credenciais do BigQuery na Vercel a partir de uma variável de ambiente (JSON string)
 gcp_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 if gcp_creds_json:
-    creds_path = os.path.join(tempfile.gettempdir(), "bigquery_credentials.json")
-    with open(creds_path, "w") as f:
-        f.write(gcp_creds_json)
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+    try:
+        # Apenas tenta validar se é um json e se a Vercel não jogou aspas duplas escapadas por acidente
+        parsed = json.loads(gcp_creds_json)
+        
+        creds_path = os.path.join(tempfile.gettempdir(), "bigquery_credentials.json")
+        with open(creds_path, "w") as f:
+            json.dump(parsed, f)
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+    except Exception as e:
+        print(f"[WARN] Error loading GOOGLE_CREDENTIALS_JSON: {e}")
 else:
     # Fallback para ambiente local, se existir o arquivo na raiz
     local_creds = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bigquery_credentials.json")
