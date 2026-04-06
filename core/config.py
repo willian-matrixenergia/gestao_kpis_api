@@ -8,8 +8,14 @@ class Settings(BaseSettings):
     _DATABASE_URL: str = "sqlite:///./test.db"
 
     # Configuração de Segurança
-    API_KEY: str = "matrix_secret_key_2026"  # Valor padrão para desenvolvimento
+    API_KEY: str = os.getenv("API_KEY", "matrix_secret_key_2026")
     API_KEY_NAME: str = "X-API-KEY"
+
+    @property
+    def ENVIRONMENT(self) -> str:
+        if os.environ.get("VERCEL"):
+            return "production"
+        return os.environ.get("ENV", "development")
 
     @property
     def DATABASE_URL(self) -> str:

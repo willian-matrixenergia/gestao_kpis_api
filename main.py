@@ -1,10 +1,11 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from core.database import engine, Base, SessionLocal
 from core.config import settings
 from controllers import kpi
 from utils.helpers import carregar_dados_iniciais
+from utils.security import get_api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,7 +25,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="API para testes de gestão de KPIs com CRUD completo.",
-    lifespan=lifespan
+    lifespan=lifespan,
+    dependencies=[Depends(get_api_key)]
 )
 
 app.include_router(kpi.router)

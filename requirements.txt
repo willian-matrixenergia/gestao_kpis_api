@@ -4,3 +4,5 @@ sqlalchemy
 # psycopg2-binary  # Necessário para PostgreSQL (instale quando for para produção)
 pydantic
 pydantic-settings
+pytest
+httpx

@@ -5,12 +5,10 @@ from typing import List
 from core.database import get_db
 from schemas.kpi import KpiResponse, KpiCreate, KpiUpdate
 from services.kpi import kpi_service
-from utils.security import get_api_key
 
 router = APIRouter(
     prefix="/kpis", 
-    tags=["kpis"],
-    dependencies=[Depends(get_api_key)]
+    tags=["kpis"]
 )
 
 @router.post("/", response_model=KpiResponse)
