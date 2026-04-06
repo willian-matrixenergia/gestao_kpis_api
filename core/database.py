@@ -1,16 +1,21 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from core.config import settings
 
-# Verifica se é SQLite para adaptar conectividade
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
-
-engine_args = {"check_same_thread": False} if is_sqlite else {}
-
-engine = create_engine(settings.DATABASE_URL, connect_args=engine_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
+
+def _create_engine():
+    """
+    Cria a engine de forma lazy para garantir que settings.DATABASE_URL
+    seja avaliado após todas as variáveis de ambiente estarem carregadas.
+    """
+    db_url = settings.DATABASE_URL
+    is_sqlite = db_url.startswith("sqlite")
+    connect_args = {"check_same_thread": False} if is_sqlite else {}
+    return create_engine(db_url, connect_args=connect_args)
+
+engine = _create_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Dependência do FastAPI para injetar a sessão
 def get_db():
