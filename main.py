@@ -17,7 +17,7 @@ try:
         from google.cloud import bigquery
         try:
             client = bigquery.Client()
-            dataset_id = f"{client.project}.gestao_kpis"
+            dataset_id = f"{client.project}.ds_refined_gestao_kpis"
             dataset = bigquery.Dataset(dataset_id)
             dataset.location = "US" # Ou defina de acordo com sua necessidade
             dataset = client.create_dataset(dataset, timeout=30, exists_ok=True)

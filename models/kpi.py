@@ -22,7 +22,7 @@ class JSONEncodedDict(TypeDecorator):
         return value
 
 class Kpi(Base):
-    __tablename__ = "kpis"
+    __tablename__ = "tb_kpi"
 
     id_kpi = Column(String(255), primary_key=True)
     area_negocio = Column(String(255))

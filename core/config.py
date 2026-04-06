@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # URL do banco de dados para BigQuery
     # bigquery://project_id/dataset_id
-    _DATABASE_URL: str = "bigquery://matrix-plataforma-dados-dev/gestao_kpis"
+    _DATABASE_URL: str = "bigquery://matrix-plataforma-dados-dev/ds_refined_gestao_kpis"
 
     # Configuração de Segurança
     API_KEY: str = os.getenv("API_KEY", "matrix_secret_key_2026")
