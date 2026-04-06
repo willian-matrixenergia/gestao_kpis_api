@@ -7,6 +7,22 @@ from controllers import kpi
 from utils.helpers import carregar_dados_iniciais
 from utils.security import get_api_key
 
+# Vercel serverless functions podem não executar o lifespan corretamente.
+# Garantimos a criação das tabelas na inicialização do módulo.
+try:
+    from models.kpi import Kpi # Garante que o modelo está registrado
+    Base.metadata.create_all(bind=engine)
+    
+    # Também tenta carregar os dados iniciais aqui caso o lifespan não rode
+    db = SessionLocal()
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), "exemplo_extrutura_dados_bd.json")
+        carregar_dados_iniciais(db, json_path)
+    finally:
+        db.close()
+except Exception as e:
+    print(f"[WARN] Falha ao criar tabelas no startup global: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Cria as tabelas associadas aos modelos se ainda não existirem

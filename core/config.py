@@ -19,9 +19,11 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        # Se estiver na Vercel (read-only filesystem), usa banco em memória
+        # Se estiver na Vercel (read-only filesystem), usa banco no /tmp
         if os.environ.get("VERCEL"):
-            return "sqlite:///:memory:"
+            import tempfile
+            tmp_db = os.path.join(tempfile.gettempdir(), "test.db")
+            return f"sqlite:///{tmp_db}"
         return self._DATABASE_URL
 
     class Config:
