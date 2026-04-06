@@ -1,7 +1,8 @@
 fastapi
 uvicorn
 sqlalchemy
-# psycopg2-binary  # Necessário para PostgreSQL (instale quando for para produção)
+sqlalchemy-bigquery
+google-cloud-bigquery
 pydantic
 pydantic-settings
 pytest

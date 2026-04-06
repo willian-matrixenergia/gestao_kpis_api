@@ -1,11 +1,26 @@
 import os
+import tempfile
 from pydantic_settings import BaseSettings
+
+# Lógica para carregar credenciais do BigQuery na Vercel a partir de uma variável de ambiente (JSON string)
+gcp_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+if gcp_creds_json:
+    creds_path = os.path.join(tempfile.gettempdir(), "bigquery_credentials.json")
+    with open(creds_path, "w") as f:
+        f.write(gcp_creds_json)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+else:
+    # Fallback para ambiente local, se existir o arquivo na raiz
+    local_creds = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bigquery_credentials.json")
+    if os.path.exists(local_creds):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_creds
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Gestão KPIs API"
     
-    # URL do banco de dados (ex: postgresql://user:password@localhost/dbname)
-    _DATABASE_URL: str = "sqlite:///./test.db"
+    # URL do banco de dados para BigQuery
+    # bigquery://project_id/dataset_id
+    _DATABASE_URL: str = "bigquery://matrix-plataforma-dados-dev/gestao_kpis"
 
     # Configuração de Segurança
     API_KEY: str = os.getenv("API_KEY", "matrix_secret_key_2026")
@@ -19,11 +34,6 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        # Se estiver na Vercel (read-only filesystem), usa banco no /tmp
-        if os.environ.get("VERCEL"):
-            import tempfile
-            tmp_db = os.path.join(tempfile.gettempdir(), "test.db")
-            return f"sqlite:///{tmp_db}"
         return self._DATABASE_URL
 
     class Config:
