@@ -25,9 +25,13 @@ else:
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Gestão KPIs API"
     
-    # URL do banco de dados para BigQuery
-    # bigquery://project_id/dataset_id
-    _DATABASE_URL: str = "bigquery://matrix-plataforma-dados-dev/ds_refined_gestao_kpis"
+    # URL do banco de dados (pode ser sobrescrita via .env)
+    # Exemplo BigQuery: bigquery://project_id/dataset_id
+    # Exemplo SQLite: sqlite:///./test.db
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL", 
+        "sqlite:///./test.db"  # Fallback para SQLite local para evitar quebrar se o BQ não estiver configurado
+    )
 
     # Configuração de Segurança
     API_KEY: str = os.getenv("API_KEY", "matrix_secret_key_2026")
@@ -39,11 +43,8 @@ class Settings(BaseSettings):
             return "production"
         return os.environ.get("ENV", "development")
 
-    @property
-    def DATABASE_URL(self) -> str:
-        return self._DATABASE_URL
-
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()

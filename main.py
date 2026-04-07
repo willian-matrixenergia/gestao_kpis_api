@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
+from fastapi.responses import JSONResponse
 from core.database import engine, Base, SessionLocal
 from core.config import settings
 from controllers import kpi
@@ -40,6 +41,13 @@ app = FastAPI(
     lifespan=lifespan,
     dependencies=[Depends(get_api_key)]
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Ocorreu um erro interno no servidor.", "details": str(exc)},
+    )
 
 app.include_router(kpi.router)
 
