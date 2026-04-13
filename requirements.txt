@@ -5,5 +5,6 @@ sqlalchemy-bigquery
 google-cloud-bigquery
 pydantic
 pydantic-settings
+slowapi
 pytest
 httpx
