@@ -7,9 +7,7 @@ from pydantic_settings import BaseSettings
 gcp_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 if gcp_creds_json:
     try:
-        # Apenas tenta validar se é um json e se a Vercel não jogou aspas duplas escapadas por acidente
         parsed = json.loads(gcp_creds_json)
-        
         creds_path = os.path.join(tempfile.gettempdir(), "bigquery_credentials.json")
         with open(creds_path, "w") as f:
             json.dump(parsed, f)
@@ -22,20 +20,22 @@ else:
     if os.path.exists(local_creds):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_creds
 
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Gestão KPIs API"
-    
-    # URL do banco de dados (pode ser sobrescrita via .env)
-    # Exemplo BigQuery: bigquery://project_id/dataset_id
-    # Exemplo SQLite: sqlite:///./test.db
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "sqlite:///./test.db"  # Fallback para SQLite local para evitar quebrar se o BQ não estiver configurado
-    )
+
+    # BigQuery settings
+    BIGQUERY_PROJECT: str = os.getenv("BIGQUERY_PROJECT", "matrix-data-products-prd")
+    BIGQUERY_DATASET: str = os.getenv("BIGQUERY_DATASET", "ds_gestao_kpis")
 
     # Configuração de Segurança
     API_KEY: str = os.getenv("API_KEY", "matrix_secret_key_2026")
     API_KEY_NAME: str = "X-API-KEY"
+
+    @property
+    def BIGQUERY_TABLE_PREFIX(self) -> str:
+        """Retorna o prefixo completo para queries BigQuery: `project.dataset`."""
+        return f"{self.BIGQUERY_PROJECT}.{self.BIGQUERY_DATASET}"
 
     @property
     def ENVIRONMENT(self) -> str:

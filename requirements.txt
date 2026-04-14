@@ -1,8 +1,7 @@
 fastapi
 uvicorn
-sqlalchemy
-sqlalchemy-bigquery
 google-cloud-bigquery
+db-dtypes
 pydantic
 pydantic-settings
 slowapi

@@ -6,11 +6,10 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from core.database import engine, Base, SessionLocal
 from core.config import settings
+from core.database import get_bq_client
 from core.exceptions import KpiApiError
 from controllers import kpi
-from utils.helpers import carregar_dados_iniciais
 from utils.security import get_api_key
 
 # ---------------------------------------------------------------------------
@@ -25,23 +24,14 @@ limiter = Limiter(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    is_bigquery = settings.DATABASE_URL.startswith("bigquery")
-
-    if not is_bigquery:
-        try:
-            from models.kpi import Kpi
-            Base.metadata.create_all(bind=engine)
-        except Exception as e:
-            print(f"[WARN] Falha ao criar tabelas: {e}")
-
-        db = SessionLocal()
-        try:
-            json_path = os.path.join(os.path.dirname(__file__), "exemplo_extrutura_dados_bd.json")
-            carregar_dados_iniciais(db, json_path)
-        except Exception as e:
-            print(f"[WARN] Falha ao carregar dados iniciais: {e}")
-        finally:
-            db.close()
+    # Validar conexao BigQuery no startup
+    try:
+        client = get_bq_client()
+        dataset_ref = f"{settings.BIGQUERY_PROJECT}.{settings.BIGQUERY_DATASET}"
+        client.get_dataset(dataset_ref)
+        print(f"[INFO] BigQuery conectado: {dataset_ref}")
+    except Exception as e:
+        print(f"[WARN] Falha ao validar BigQuery: {e}")
 
     yield
 
@@ -51,11 +41,13 @@ app = FastAPI(
     description=(
         "API para gestao centralizada de KPIs da Matrix - "
         "Comercializadora de Energia Eletrica.\n\n"
+        "**Dados:** Consulta a view `vw_kpi_vs_meta` no BigQuery "
+        f"(projeto: `{settings.BIGQUERY_PROJECT}`, dataset: `{settings.BIGQUERY_DATASET}`).\n\n"
         "**Autenticacao:** Envie o header `X-API-KEY` em todas as requisicoes.\n\n"
         "**Rate Limit:** 60 requisicoes por minuto por IP "
         "(headers `X-RateLimit-Limit` e `X-RateLimit-Remaining` na resposta)."
     ),
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
     dependencies=[Depends(get_api_key)],
 )
@@ -83,7 +75,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(KpiApiError)
 async def kpi_api_error_handler(request: Request, exc: KpiApiError):
-    """Handler para erros de negocio tipados (NotFound, Duplicate, etc.)."""
+    """Handler para erros de negocio tipados (NotFound, etc.)."""
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.to_dict(),
@@ -118,5 +110,8 @@ app.include_router(kpi.router)
 )
 def root():
     return {
-        "message": "Bem-vindo a API de Gestao de KPIs! Acesse /docs para visualizar os endpoints."
+        "message": "Bem-vindo a API de Gestao de KPIs! Acesse /docs para visualizar os endpoints.",
+        "version": "2.0.0",
+        "bigquery_project": settings.BIGQUERY_PROJECT,
+        "bigquery_dataset": settings.BIGQUERY_DATASET,
     }

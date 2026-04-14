@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Request, Query
-from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional, List
 
-from core.database import get_db
-from core.exceptions import NotFoundError, DuplicateError
-from schemas.kpi import KpiResponse, KpiCreate, KpiUpdate, ErrorDetail
+from fastapi import APIRouter, Depends, Request, Query
+from google.cloud import bigquery
+
+from core.database import get_bq_client
+from core.exceptions import NotFoundError
+from schemas.kpi import KpiProcessamentoResponse, KpiListResponse, ErrorDetail
 from services.kpi import kpi_service
 
 router = APIRouter(
@@ -16,51 +17,14 @@ router = APIRouter(
 _responses_not_found = {
     404: {
         "model": ErrorDetail,
-        "description": "KPI nao encontrado.",
+        "description": "Registro nao encontrado.",
         "content": {
             "application/json": {
                 "example": {
                     "error_code": "NOT_FOUND",
-                    "message": "KPI com id 'KPI-XYZ' nao encontrado.",
-                    "details": {"resource": "KPI", "id": "KPI-XYZ"},
+                    "message": "Processamento com id 'PROC-XYZ' nao encontrado.",
+                    "details": {"resource": "Processamento", "id": "PROC-XYZ"},
                     "timestamp": "2026-04-09T14:30:00+00:00",
-                }
-            }
-        },
-    }
-}
-
-_responses_duplicate = {
-    409: {
-        "model": ErrorDetail,
-        "description": "KPI com este id ja existe.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error_code": "DUPLICATE",
-                    "message": "KPI com id 'KPI-GER-001' ja existe.",
-                    "details": {"resource": "KPI", "id": "KPI-GER-001"},
-                    "timestamp": "2026-04-09T14:30:00+00:00",
-                }
-            }
-        },
-    }
-}
-
-_responses_validation = {
-    422: {
-        "description": "Erro de validacao nos dados enviados.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": [
-                        {
-                            "type": "missing",
-                            "loc": ["body", "area_negocio"],
-                            "msg": "Field required",
-                            "input": {},
-                        }
-                    ]
                 }
             }
         },
@@ -81,80 +45,75 @@ _responses_rate_limit = {
 }
 
 
-@router.post(
-    "/",
-    response_model=KpiResponse,
-    status_code=201,
-    summary="Criar novo KPI",
-    description="Cria um novo KPI no sistema. O campo `id_kpi` deve ser unico.",
-    responses={**_responses_duplicate, **_responses_validation, **_responses_rate_limit},
-)
-def create_kpi(request: Request, kpi: KpiCreate, db: Session = Depends(get_db)):
-    db_kpi = kpi_service.get_kpi(db, id_kpi=kpi.id_kpi)
-    if db_kpi:
-        raise DuplicateError(resource="KPI", resource_id=kpi.id_kpi)
-    return kpi_service.create_kpi(db=db, kpi=kpi)
-
-
 @router.get(
     "/",
-    response_model=List[KpiResponse],
-    summary="Listar KPIs",
+    response_model=KpiListResponse,
+    summary="Listar KPIs processados",
     description=(
-        "Retorna a lista de KPIs cadastrados com suporte a paginacao "
-        "via `skip` e `limit`."
+        "Retorna a lista de KPIs processados com suporte a filtros "
+        "e paginacao via `skip` e `limit`. "
+        "Dados originados da view `vw_kpi_vs_meta` do BigQuery."
     ),
     responses={**_responses_rate_limit},
 )
-def read_kpis(
+def list_kpis(
     request: Request,
+    id_kpi: Optional[str] = Query(None, description="Filtrar por identificador do KPI."),
+    nm_bu_kpi: Optional[str] = Query(None, description="Filtrar por Business Unit (ex: BESS, GRID)."),
+    nm_area_kpi: Optional[str] = Query(None, description="Filtrar por area (ex: Trading, Comercial)."),
+    dt_referencia: Optional[str] = Query(None, description="Filtrar por data de referencia (YYYY-MM-DD)."),
+    status_atingimento: Optional[str] = Query(None, description="Filtrar por status: atingido, atencao, critico."),
     skip: int = Query(0, ge=0, description="Quantidade de registros a pular."),
     limit: int = Query(100, ge=1, le=500, description="Quantidade maxima de registros retornados (max 500)."),
-    db: Session = Depends(get_db),
+    client: bigquery.Client = Depends(get_bq_client),
 ):
-    return kpi_service.get_kpis(db, skip=skip, limit=limit)
+    result = kpi_service.get_all(
+        client,
+        id_kpi=id_kpi,
+        nm_bu_kpi=nm_bu_kpi,
+        nm_area_kpi=nm_area_kpi,
+        dt_referencia=dt_referencia,
+        status_atingimento=status_atingimento,
+        skip=skip,
+        limit=limit,
+    )
+    return result
 
 
 @router.get(
-    "/{id_kpi}",
-    response_model=KpiResponse,
-    summary="Buscar KPI por ID",
-    description="Retorna os dados de um KPI especifico pelo seu identificador unico.",
+    "/processamento/{id_processamento}",
+    response_model=KpiProcessamentoResponse,
+    summary="Buscar por ID de processamento",
+    description="Retorna um registro unico pelo seu identificador de processamento.",
     responses={**_responses_not_found, **_responses_rate_limit},
 )
-def read_kpi(request: Request, id_kpi: str, db: Session = Depends(get_db)):
-    db_kpi = kpi_service.get_kpi(db, id_kpi=id_kpi)
-    if db_kpi is None:
-        raise NotFoundError(resource="KPI", resource_id=id_kpi)
-    return db_kpi
+def get_by_processamento(
+    request: Request,
+    id_processamento: str,
+    client: bigquery.Client = Depends(get_bq_client),
+):
+    result = kpi_service.get_by_processamento(client, id_processamento)
+    if result is None:
+        raise NotFoundError(resource="Processamento", resource_id=id_processamento)
+    return result
 
 
-@router.put(
-    "/{id_kpi}",
-    response_model=KpiResponse,
-    summary="Atualizar KPI",
+@router.get(
+    "/kpi/{id_kpi}",
+    response_model=List[KpiProcessamentoResponse],
+    summary="Historico de um KPI",
     description=(
-        "Atualiza parcialmente um KPI existente. "
-        "Apenas os campos enviados no body serao alterados."
+        "Retorna todos os registros de processamento de um KPI especifico, "
+        "ordenados por data de processamento (mais recente primeiro)."
     ),
-    responses={**_responses_not_found, **_responses_validation, **_responses_rate_limit},
-)
-def update_kpi(request: Request, id_kpi: str, kpi: KpiUpdate, db: Session = Depends(get_db)):
-    db_kpi = kpi_service.update_kpi(db, id_kpi=id_kpi, kpi=kpi)
-    if db_kpi is None:
-        raise NotFoundError(resource="KPI", resource_id=id_kpi)
-    return db_kpi
-
-
-@router.delete(
-    "/{id_kpi}",
-    response_model=KpiResponse,
-    summary="Deletar KPI",
-    description="Remove permanentemente um KPI do sistema pelo seu identificador.",
     responses={**_responses_not_found, **_responses_rate_limit},
 )
-def delete_kpi(request: Request, id_kpi: str, db: Session = Depends(get_db)):
-    db_kpi = kpi_service.delete_kpi(db, id_kpi=id_kpi)
-    if db_kpi is None:
+def get_kpi_history(
+    request: Request,
+    id_kpi: str,
+    client: bigquery.Client = Depends(get_bq_client),
+):
+    results = kpi_service.get_by_kpi(client, id_kpi)
+    if not results:
         raise NotFoundError(resource="KPI", resource_id=id_kpi)
-    return db_kpi
+    return results

@@ -1,26 +1,25 @@
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base
+from google.cloud import bigquery
 from core.config import settings
 
-Base = declarative_base()
 
-def _create_engine():
+def _create_bigquery_client() -> bigquery.Client:
     """
-    Cria a engine de forma lazy para garantir que settings.DATABASE_URL
-    seja avaliado após todas as variáveis de ambiente estarem carregadas.
+    Cria o client do BigQuery de forma lazy.
+    Usa GOOGLE_APPLICATION_CREDENTIALS configurado em config.py.
     """
-    db_url = settings.DATABASE_URL
-    is_sqlite = db_url.startswith("sqlite")
-    connect_args = {"check_same_thread": False} if is_sqlite else {}
-    return create_engine(db_url, connect_args=connect_args)
+    return bigquery.Client(project=settings.BIGQUERY_PROJECT)
 
-engine = _create_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Dependência do FastAPI para injetar a sessão
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Client singleton para reutilização
+_bq_client: bigquery.Client | None = None
+
+
+def get_bq_client() -> bigquery.Client:
+    """
+    Dependência do FastAPI para injetar o client BigQuery.
+    Reutiliza o client (thread-safe por design do google-cloud-bigquery).
+    """
+    global _bq_client
+    if _bq_client is None:
+        _bq_client = _create_bigquery_client()
+    return _bq_client
