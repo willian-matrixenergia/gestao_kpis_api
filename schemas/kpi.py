@@ -3,7 +3,7 @@ from typing import Optional, Any, Dict, List
 
 
 class KpiProcessamentoResponse(BaseModel):
-    """Schema flat desnormalizado — espelha a view vw_kpi_vs_meta do BigQuery."""
+    """Schema flat desnormalizado — espelha a view vw_kpi_ultimo_valor do BigQuery."""
 
     # Processamento
     id_processamento: str = Field(
@@ -22,18 +22,33 @@ class KpiProcessamentoResponse(BaseModel):
         description="Nome do KPI.",
         json_schema_extra={"examples": ["Receita de Trading Intraday"]},
     )
-    nm_bu_kpi: str = Field(
-        ...,
+    nm_bu: Optional[str] = Field(
+        default=None,
         description="Business Unit do KPI.",
         json_schema_extra={"examples": ["BESS"]},
     )
-    nm_area_kpi: str = Field(
-        ...,
+    nm_area: Optional[str] = Field(
+        default=None,
         description="Area do KPI.",
         json_schema_extra={"examples": ["Trading"]},
     )
-    nm_responsavel_kpi: str = Field(
-        ...,
+    nm_unidade: Optional[str] = Field(
+        default=None,
+        description="Unidade de medida do KPI.",
+        json_schema_extra={"examples": ["R$"]},
+    )
+    tp_periodicidade: Optional[str] = Field(
+        default=None,
+        description="Periodicidade do KPI.",
+        json_schema_extra={"examples": ["Mensal"]},
+    )
+    tp_relatorio: Optional[str] = Field(
+        default=None,
+        description="Tipo de relatório do KPI.",
+        json_schema_extra={"examples": ["Gerencial"]},
+    )
+    nm_responsavel_kpi: Optional[str] = Field(
+        default=None,
         description="Email do responsavel pelo KPI.",
         json_schema_extra={"examples": ["lucas.melo@empresa.com"]},
     )
@@ -43,23 +58,18 @@ class KpiProcessamentoResponse(BaseModel):
         json_schema_extra={"examples": ["true"]},
     )
     # Regra (dim_regra_kpi)
-    id_regra: str = Field(
-        ...,
+    id_regra: Optional[str] = Field(
+        default=None,
         description="Identificador da regra de calculo.",
         json_schema_extra={"examples": ["regra_004"]},
     )
-    ds_regra: str = Field(
-        ...,
+    ds_regra: Optional[str] = Field(
+        default=None,
         description="Descricao da regra de apuracao.",
         json_schema_extra={"examples": ["Soma da receita liquida obtida nas operacoes de compra e venda de energia"]},
     )
-    dt_criacao_regra: str = Field(
-        ...,
-        description="Data de criacao da regra (YYYY-MM-DD).",
-        json_schema_extra={"examples": ["2025-02-01"]},
-    )
-    fl_regra_ativa: str = Field(
-        ...,
+    fl_regra_ativa: Optional[str] = Field(
+        default=None,
         description="Flag indicando se a regra esta ativa.",
         json_schema_extra={"examples": ["true"]},
     )
@@ -85,49 +95,44 @@ class KpiProcessamentoResponse(BaseModel):
         json_schema_extra={"examples": ["lucas.melo@empresa.com"]},
     )
     # Meta (dim_meta + fct_meta_valor)
-    id_meta: str = Field(
-        ...,
+    id_meta: Optional[str] = Field(
+        default=None,
         description="Identificador da meta.",
         json_schema_extra={"examples": ["meta_rec_men"]},
     )
-    nm_meta: str = Field(
-        ...,
+    nm_meta: Optional[str] = Field(
+        default=None,
         description="Nome da meta.",
         json_schema_extra={"examples": ["Meta Mensal Receita Trading"]},
     )
-    nm_bu_meta: str = Field(
-        ...,
-        description="Business Unit da meta.",
-        json_schema_extra={"examples": ["BESS"]},
-    )
-    nm_area_meta: str = Field(
-        ...,
-        description="Area da meta.",
-        json_schema_extra={"examples": ["Trading"]},
-    )
-    tp_meta: str = Field(
-        ...,
+    tp_meta: Optional[str] = Field(
+        default=None,
         description="Tipo da meta (Mensal, Semanal, etc).",
         json_schema_extra={"examples": ["Mensal"]},
     )
-    vl_meta: str = Field(
-        ...,
+    vl_meta: Optional[str] = Field(
+        default=None,
         description="Valor alvo da meta.",
         json_schema_extra={"examples": ["130000.0"]},
     )
-    dt_atualizacao_meta: str = Field(
-        ...,
+    dt_atualizacao_meta: Optional[str] = Field(
+        default=None,
         description="Data/hora da ultima atualizacao da meta (ISO 8601).",
         json_schema_extra={"examples": ["2026-02-01T09:00:00"]},
     )
+    nm_responsavel_meta: Optional[str] = Field(
+        default=None,
+        description="Responsavel pela meta.",
+        json_schema_extra={"examples": ["lucas.melo@empresa.com"]},
+    )
     # Atingimento (calculado)
-    pct_atingimento: str = Field(
-        ...,
+    pct_atingimento: Optional[str] = Field(
+        default=None,
         description="Percentual de atingimento da meta.",
         json_schema_extra={"examples": ["103.85"]},
     )
-    vl_gap_absoluto: str = Field(
-        ...,
+    vl_gap_absoluto: Optional[str] = Field(
+        default=None,
         description="Diferenca absoluta entre realizado e meta.",
         json_schema_extra={"examples": ["5000.0"]},
     )

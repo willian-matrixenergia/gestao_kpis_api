@@ -7,12 +7,12 @@ from core.config import settings
 
 class KpiBigQueryService:
     """
-    Service read-only que consulta a view vw_kpi_vs_meta no BigQuery.
+    Service read-only que consulta a view vw_kpi_ultimo_valor no BigQuery.
     Todos os valores são retornados como strings para manter compatibilidade
     com o formato flat do JSON de integração.
     """
 
-    VIEW_NAME = "vw_kpi_vs_meta"
+    VIEW_NAME = "vw_kpi_ultimo_valor"
 
     def __init__(self):
         self._table_ref = f"`{settings.BIGQUERY_TABLE_PREFIX}.{self.VIEW_NAME}`"
@@ -42,12 +42,12 @@ class KpiBigQueryService:
             params.append(bigquery.ScalarQueryParameter("id_kpi", "STRING", id_kpi))
 
         if nm_bu_kpi:
-            conditions.append("nm_bu_kpi = @nm_bu_kpi")
-            params.append(bigquery.ScalarQueryParameter("nm_bu_kpi", "STRING", nm_bu_kpi))
+            conditions.append("nm_bu = @nm_bu")
+            params.append(bigquery.ScalarQueryParameter("nm_bu", "STRING", nm_bu_kpi))
 
         if nm_area_kpi:
-            conditions.append("nm_area_kpi = @nm_area_kpi")
-            params.append(bigquery.ScalarQueryParameter("nm_area_kpi", "STRING", nm_area_kpi))
+            conditions.append("nm_area = @nm_area")
+            params.append(bigquery.ScalarQueryParameter("nm_area", "STRING", nm_area_kpi))
 
         if dt_referencia:
             conditions.append("dt_referencia = @dt_referencia")
@@ -61,6 +61,7 @@ class KpiBigQueryService:
 
         # Query de contagem
         count_sql = f"SELECT COUNT(*) as total FROM {self._table_ref} {where_clause}"
+        print(f"Executing query: {count_sql}")
         total = self._execute_scalar(client, count_sql, params)
 
         # Query de dados com paginação

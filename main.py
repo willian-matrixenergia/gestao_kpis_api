@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -41,7 +42,7 @@ app = FastAPI(
     description=(
         "API para gestao centralizada de KPIs da Matrix - "
         "Comercializadora de Energia Eletrica.\n\n"
-        "**Dados:** Consulta a view `vw_kpi_vs_meta` no BigQuery "
+        "**Dados:** Consulta a view `vw_kpi_ultimo_valor` no BigQuery "
         f"(projeto: `{settings.BIGQUERY_PROJECT}`, dataset: `{settings.BIGQUERY_DATASET}`).\n\n"
         "**Autenticacao:** Envie o header `X-API-KEY` em todas as requisicoes.\n\n"
         "**Rate Limit:** 60 requisicoes por minuto por IP "
@@ -59,6 +60,18 @@ app.state.limiter = limiter
 # ---------------------------------------------------------------------------
 # Exception Handlers
 # ---------------------------------------------------------------------------
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Sobrescreve o 422 padrao do FastAPI para usar o nosso formato de erro padrao (400)."""
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error_code": "VALIDATION_ERROR",
+            "message": "Erro de validacao nos parametros da requisicao.",
+            "details": {"errors": exc.errors()},
+        },
+    )
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):

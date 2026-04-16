@@ -47,3 +47,12 @@ class DatabaseError(KpiApiError):
             status_code=500,
             details={"operation": operation, "detail": detail},
         )
+
+
+class UnauthorizedError(KpiApiError):
+    def __init__(self, detail: str = "Acesso negado: API Key ausente ou invalida."):
+        super().__init__(
+            code="UNAUTHORIZED",
+            message=detail,
+            status_code=401,
+        )

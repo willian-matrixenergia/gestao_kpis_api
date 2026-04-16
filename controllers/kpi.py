@@ -14,6 +14,63 @@ router = APIRouter(
 )
 
 # -- Exemplos reutilizaveis para documentacao de erros --
+_responses_padrao = {
+    400: {
+        "model": ErrorDetail,
+        "description": "Erro de validacao (ex: parametros invalidos).",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error_code": "VALIDATION_ERROR",
+                    "message": "Erro de validacao nos parametros da requisicao.",
+                    "details": {"errors": []},
+                    "timestamp": "2026-04-09T14:30:00+00:00"
+                }
+            }
+        }
+    },
+    401: {
+        "model": ErrorDetail,
+        "description": "API Key ausente ou invalida.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error_code": "UNAUTHORIZED",
+                    "message": "Acesso negado: API Key invalida.",
+                    "details": {},
+                    "timestamp": "2026-04-09T14:30:00+00:00"
+                }
+            }
+        }
+    },
+    429: {
+        "description": "Limite de requisicoes excedido.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error_code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Limite de requisicoes excedido: 60 per 1 minute",
+                    "details": {"limit": "60/minute"}
+                }
+            }
+        },
+    },
+    500: {
+        "model": ErrorDetail,
+        "description": "Erro interno do servidor.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error_code": "INTERNAL_ERROR",
+                    "message": "Ocorreu um erro interno no servidor.",
+                    "details": {"type": "Exception"},
+                    "timestamp": "2026-04-09T14:30:00+00:00"
+                }
+            }
+        }
+    }
+}
+
 _responses_not_found = {
     404: {
         "model": ErrorDetail,
@@ -31,18 +88,8 @@ _responses_not_found = {
     }
 }
 
-_responses_rate_limit = {
-    429: {
-        "description": "Limite de requisicoes excedido.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error": "Rate limit exceeded: 60 per 1 minute"
-                }
-            }
-        },
-    }
-}
+_all_responses = {**_responses_padrao}
+_all_responses_with_not_found = {**_responses_padrao, **_responses_not_found}
 
 
 @router.get(
@@ -52,9 +99,9 @@ _responses_rate_limit = {
     description=(
         "Retorna a lista de KPIs processados com suporte a filtros "
         "e paginacao via `skip` e `limit`. "
-        "Dados originados da view `vw_kpi_vs_meta` do BigQuery."
+        "Dados originados da view `vw_kpi_ultimo_valor` do BigQuery."
     ),
-    responses={**_responses_rate_limit},
+    responses=_all_responses,
 )
 def list_kpis(
     request: Request,
@@ -85,7 +132,7 @@ def list_kpis(
     response_model=KpiProcessamentoResponse,
     summary="Buscar por ID de processamento",
     description="Retorna um registro unico pelo seu identificador de processamento.",
-    responses={**_responses_not_found, **_responses_rate_limit},
+    responses=_all_responses_with_not_found,
 )
 def get_by_processamento(
     request: Request,
@@ -104,9 +151,10 @@ def get_by_processamento(
     summary="Historico de um KPI",
     description=(
         "Retorna todos os registros de processamento de um KPI especifico, "
-        "ordenados por data de processamento (mais recente primeiro)."
+        "ordenados por data de processamento (mais recente primeiro). "
+        "Conforme arquitetura, retorna historico padrao."
     ),
-    responses={**_responses_not_found, **_responses_rate_limit},
+    responses=_all_responses_with_not_found,
 )
 def get_kpi_history(
     request: Request,
